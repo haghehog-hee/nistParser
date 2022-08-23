@@ -203,8 +203,6 @@ bool nistTag::load(const std::vector<unsigned char>& data, unsigned& offset, uns
    return false;
 }
 
-//bool nistTag
-
 std::vector<unsigned char> nistTag::dataCopy() const
 {
    dbg7( (char*)"nistTag::dataCopy record %d tag %d\n",rec_,nom_);
@@ -339,9 +337,6 @@ int nistRecord::write(FILE* out, unsigned len)
         std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
         std::string str = std::to_string(type_)+"."+number+":";
         fwrite(str.c_str(), 1, str.length(), out);
-        //int kek = ftell(out);
-        //int diff = tags_[i].offset_ - kek;
-        //std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
         fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
         if (i + 1 == tags_.size()) 
         {
@@ -935,7 +930,6 @@ bool type4Record::load(const std::vector<unsigned char>& data, unsigned& offset)
          dbg7("type4Record::load empty image record %d\n",hdr.idc_);
       }
       offset += record_size_;
-      //std::cout << "record size = " << record_size_;
       return true;
    }
    else
@@ -960,7 +954,6 @@ int type4Record::write(FILE* out, unsigned len)
 
     hdr.len_ = htonl(recordsize);
     
-    //std::cout << "record size = " << record_size_;
     hdr.idc_ = idc_;
     hdr.imp_ = imp_;
     memcpy(hdr.fgp_, fgp_, sizeof(fgp_));
@@ -1479,16 +1472,12 @@ int type10Record::write(FILE* out, unsigned len)
     gs = nistParser::GS();
     unsigned char fs;
     fs = nistParser::FS();
-    std::cout << std::endl;
     for (int i = 0; i < tags_.size(); i++)
     {
         std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
         std::string str = std::to_string(type_) + "." + number + ":";
         fwrite(str.c_str(), 1, str.length(), out);
-        int kek = ftell(out);
-        int diff = tags_[i].offset_ - kek;
 
-        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
         switch (tags_[i].tag_no())
         {
         case 1:
@@ -1897,16 +1886,11 @@ int type13Record::write(FILE* out, unsigned len)
     gs = nistParser::GS();
     unsigned char fs;
     fs = nistParser::FS();
-    std::cout << std::endl;
     for (int i = 0; i < tags_.size(); i++)
     {
         std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
         std::string str = std::to_string(type_) + "." + number + ":";
         fwrite(str.c_str(), 1, str.length(), out);
-        int kek = ftell(out);
-        int diff = tags_[i].offset_ - kek;
-
-        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
         switch (tags_[i].tag_no())
         {
         case 1:
@@ -2314,16 +2298,11 @@ int type14Record::write(FILE* out, unsigned len)
     gs = nistParser::GS();
     unsigned char fs;
     fs = nistParser::FS();
-    std::cout << std::endl;
     for (int i = 0; i < tags_.size(); i++)
     {
         std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
         std::string str = std::to_string(type_) + "." + number + ":";
         fwrite(str.c_str(), 1, str.length(), out);
-        int kek = ftell(out);
-        int diff = tags_[i].offset_ - kek;
-
-        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
         switch (tags_[i].tag_no())
         {
         case 1:
@@ -2728,17 +2707,13 @@ int type15Record::write(FILE* out, unsigned len)
     gs = nistParser::GS();
     unsigned char fs;
     fs = nistParser::FS();
-    std::cout << std::endl;
     for (int i = 0; i < tags_.size(); i++)
     {
         
         std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
         std::string str = std::to_string(type_) + "." + number + ":";
         fwrite(str.c_str(), 1, str.length(), out);
-        int kek = ftell(out);
-        int diff = tags_[i].offset_ - kek;
 
-        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
         switch (tags_[i].tag_no()) 
         {
             case 1:
@@ -3116,7 +3091,6 @@ bool nistParser::load(const std::vector<unsigned char>& file_data, bool force)
             break;
          }
          records_.back()->offset_ = offset;
-         std::cout << "\n" << "offset at load = " << offset << " type = " << rec_type;
       }
    }
    return force? true:res;
@@ -3223,7 +3197,6 @@ bool nistParser::writeFile(const std::string& output_file_name)
             fseek(out, -len, SEEK_CUR);
             (records_[rec_no])->write(out, len);
             int pos = ftell(out);
-            std::cout << "\n" << "offset at write " << ftell(out) << " delta " << records_[rec_no]->offset_-pos << " type " << std::to_string(records_[rec_no]->type());
 
         }
  
