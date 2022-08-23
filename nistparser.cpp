@@ -544,7 +544,7 @@ bool type1Record::load(const std::vector<unsigned char>& data, unsigned& offset,
       {
          //1.012 NTR 19.68
          tag_data = tag->dataCopy();
-         scanning_res_ = atof((char*)&tag_data.front());
+         transmitting_res_ = atof((char*)&tag_data.front());
       }
       tag = getTagById(13);
       if(tag)
@@ -1052,7 +1052,7 @@ int type7Record::write(FILE* out, unsigned len)
     hdr.idc_ = idc_;
     hdr.imt_ = imt_;
     memcpy(hdr.pcn_, pcn_, sizeof(pcn_));
-    memcpy(hdr.imr_, imr_, sizeof(pcn_));
+    memcpy(hdr.imr_, imr_, sizeof(imr_));
     hdr.cga_ = cga_;
     fwrite(&hdr, sizeof(Type7Header), 1, out);
     if (image_data_)
@@ -1176,6 +1176,9 @@ bool type9Record::load(const std::vector<unsigned char>& data, unsigned& offset)
    clear();
    return false;
 }
+
+
+
 type10Record::type10Record()
    :type4Record()
 {
@@ -1469,6 +1472,141 @@ bool type10Record::load(const std::vector<unsigned char>& data, unsigned& offset
 }
 
 
+int type10Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    unsigned char gs;
+    gs = nistParser::GS();
+    unsigned char fs;
+    fs = nistParser::FS();
+    std::cout << std::endl;
+    for (int i = 0; i < tags_.size(); i++)
+    {
+        std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
+        std::string str = std::to_string(type_) + "." + number + ":";
+        fwrite(str.c_str(), 1, str.length(), out);
+        int kek = ftell(out);
+        int diff = tags_[i].offset_ - kek;
+
+        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
+        switch (tags_[i].tag_no())
+        {
+        case 1:
+        {
+            if (len)
+            {
+                std::string x = itos(len);
+                fwrite(x.c_str(), 1, x.length(), out);
+            }
+            break;
+        }
+        case 2:
+        {
+            std::string x = std::to_string(idc_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+        case 3:
+        {
+            fwrite(imt_.c_str(), 1, ori_.length(), out);
+            break;
+        }
+        case 4:
+        {
+            fwrite(ori_.c_str(), 1, ori_.length(), out);
+            break;
+        }
+        case 5:
+        {
+            fwrite(photo_date_.c_str(), 1, photo_date_.length(), out);
+            break;
+        }
+        case 6:
+        {
+            std::string x = std::to_string(hll_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 7:
+        {
+            std::string x = std::to_string(vll_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 8:
+        {
+            fwrite(&slc_, 1, 1, out);
+            break;
+        }
+
+        case 9:
+        {
+            std::string x = std::to_string(hps_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 10:
+        {
+            std::string x = std::to_string(vps_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 11:
+        {
+            fwrite(cga_.c_str(), 1, cga_.length(), out);
+            break;
+        }
+        case 12:
+        {
+            fwrite(csp_.c_str(), 1, csp_.length(), out);
+            break;
+        }
+
+        case 20:
+        {
+            fwrite(pos_.c_str(), 1, pos_.length(), out);
+            break;
+        }
+
+        case 21:
+        {
+            fwrite(poa_.c_str(), 1, poa_.length(), out);
+            break;
+        }
+        case 22:
+        {
+            fwrite(pxs_.c_str(), 1, pxs_.length(), out);
+            break;
+        }
+        case 999:
+            if (image_data_)
+            {
+                fwrite(image_data_, 1, image_data_size_, out);
+            }
+            break;
+        default:
+            fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
+            break;
+        }
+
+
+        if (i + 1 == tags_.size())
+        {
+            fwrite(&fs, 1, 1, out);
+        }
+        else
+        {
+            fwrite(&gs, 1, 1, out);
+        }
+
+    }
+    return ftell(out) - stpos;
+}
+
 type13Record::type13Record()
    :type4Record()
 {
@@ -1750,6 +1888,136 @@ bool type13Record::load(const std::vector<unsigned char>& data, unsigned& offset
    clear();
    dbg0( (char*)"type13Record::load error\n");
    return false;
+}
+
+int type13Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    unsigned char gs;
+    gs = nistParser::GS();
+    unsigned char fs;
+    fs = nistParser::FS();
+    std::cout << std::endl;
+    for (int i = 0; i < tags_.size(); i++)
+    {
+        std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
+        std::string str = std::to_string(type_) + "." + number + ":";
+        fwrite(str.c_str(), 1, str.length(), out);
+        int kek = ftell(out);
+        int diff = tags_[i].offset_ - kek;
+
+        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
+        switch (tags_[i].tag_no())
+        {
+        case 1:
+        {
+            if (len)
+            {
+                std::string x = itos(len);
+                fwrite(x.c_str(), 1, x.length(), out);
+            }
+            break;
+        }
+        case 2:
+        {
+            std::string x = std::to_string(idc_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+        case 3:
+        {
+            std::string x = std::to_string(imp_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+        case 4:
+        {
+            fwrite(ori_.c_str(), 1, ori_.length(), out);
+            break;
+        }
+        case 5:
+        {
+            fwrite(lcd_.c_str(), 1, lcd_.length(), out);
+            break;
+        }
+        case 6:
+        {
+            std::string x = std::to_string(hll_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 7:
+        {
+            std::string x = std::to_string(vll_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 8:
+        {
+            fwrite(&slc_, 1, 1, out);
+            break;
+        }
+
+        case 9:
+        {
+            std::string x = std::to_string(hps_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 10:
+        {
+            std::string x = std::to_string(vps_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 11:
+        {
+            fwrite(cga_.c_str(), 1, cga_.length(), out);
+            break;
+        }
+        case 12:
+        {
+            fwrite(&bpx_, 1, 1, out);
+            break;
+        }
+
+        case 13:
+        {
+            fwrite(fgp_.c_str(), 1, fgp_.length(), out);
+            break;
+        }
+
+        case 20:
+        {
+            fwrite(com_.c_str(), 1, com_.length(), out);
+            break;
+        }
+        case 999:
+            if (image_data_)
+            {
+                fwrite(image_data_, 1, image_data_size_, out);
+            }
+            break;
+        default:
+            fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
+            break;
+        }
+
+        if (i + 1 == tags_.size())
+        {
+            fwrite(&fs, 1, 1, out);
+        }
+        else
+        {
+            fwrite(&gs, 1, 1, out);
+        }
+
+    }
+    return ftell(out) - stpos;
 }
 
 unsigned char type13Record::getFGP()
@@ -2037,6 +2305,136 @@ bool type14Record::load(const std::vector<unsigned char>& data, unsigned& offset
    clear();
    dbg0( (char*)"type14Record::load error\n");
    return false;
+}
+
+int type14Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    unsigned char gs;
+    gs = nistParser::GS();
+    unsigned char fs;
+    fs = nistParser::FS();
+    std::cout << std::endl;
+    for (int i = 0; i < tags_.size(); i++)
+    {
+        std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
+        std::string str = std::to_string(type_) + "." + number + ":";
+        fwrite(str.c_str(), 1, str.length(), out);
+        int kek = ftell(out);
+        int diff = tags_[i].offset_ - kek;
+
+        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
+        switch (tags_[i].tag_no())
+        {
+        case 1:
+        {
+            if (len)
+            {
+                std::string x = itos(len);
+                fwrite(x.c_str(), 1, x.length(), out);
+            }
+            break;
+        }
+        case 2:
+        {
+            std::string x = std::to_string(idc_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+        case 3:
+        {
+            std::string x = std::to_string(imp_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+        case 4:
+        {
+            fwrite(ori_.c_str(), 1, ori_.length(), out);
+            break;
+        }
+        case 5:
+        {
+            fwrite(tcd_.c_str(), 1, tcd_.length(), out);
+            break;
+        }
+        case 6:
+        {
+            std::string x = std::to_string(hll_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 7:
+        {
+            std::string x = std::to_string(vll_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 8:
+        {
+            fwrite(&slc_, 1, 1, out);
+            break;
+        }
+
+        case 9:
+        {
+            std::string x = std::to_string(hps_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 10:
+        {
+            std::string x = std::to_string(vps_);
+            fwrite(x.c_str(), 1, x.length(), out);
+            break;
+        }
+
+        case 11:
+        {
+            fwrite(cga_.c_str(), 1, cga_.length(), out);
+            break;
+        }
+        case 12:
+        {
+            fwrite(&pbx_, 1, 1, out);
+            break;
+        }
+
+        case 13:
+        {
+            fwrite(&fgp_, 1, 1, out);
+            break;
+        }
+
+        case 20:
+        {
+            fwrite(com_.c_str(), 1, com_.length(), out);
+            break;
+        }
+        case 999:
+            if (image_data_)
+            {
+                fwrite(image_data_, 1, image_data_size_, out);
+            }
+            break;
+        default:
+            fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
+            break;
+        }
+
+        if (i + 1 == tags_.size())
+        {
+            fwrite(&fs, 1, 1, out);
+        }
+        else
+        {
+            fwrite(&gs, 1, 1, out);
+        }
+
+    }
+    return ftell(out) - stpos;
 }
 
 type15Record::type15Record()
@@ -2431,6 +2829,7 @@ int type15Record::write(FILE* out, unsigned len)
                 fwrite(com_.c_str(), 1, com_.length(), out);
                 break;
             }
+
             case 999:
                 if (image_data_)
                 {

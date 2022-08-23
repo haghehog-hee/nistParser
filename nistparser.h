@@ -339,6 +339,7 @@ public:
    type10Record();
    ~type10Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset);
+   int write(FILE* out, unsigned len = 0);
    const std::string& getCGA(){return cga_;}
    const std::string& getIMT(){return imt_;}
    const std::string& getPHD(){return photo_date_;}
@@ -441,6 +442,7 @@ public:
    type13Record();
    ~type13Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset);
+   int write(FILE* out, unsigned len = 0);
    const char* getCGA(){return cga_.c_str();}
    unsigned char getFGP();
    const std::string& getLCD(){return lcd_;}
