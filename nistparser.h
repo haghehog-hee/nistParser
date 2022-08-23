@@ -5,6 +5,9 @@
 #include <vector>
 #include <utility>
 
+
+
+
 ///! Базовый класс тега ANSI-NIST файла
 class nistTag
 { 
@@ -22,9 +25,10 @@ public:
    const unsigned char* data()const{return data_;} 
    //!Возвращает копию данных тега, добавляет замыкающий ноль
    std::vector<unsigned char> dataCopy() const;
+   unsigned offset_;
 protected:
    ///Смещение начала данных тега относительно начала файла
-   unsigned offset_; 
+   //unsigned offset_; ------------------------------------------------------- fixme
    ///Размер данных
    unsigned size_;
    ///Тип записи
@@ -43,7 +47,8 @@ public:
    nistRecord();
    virtual ~nistRecord();
    virtual bool load(const std::vector<unsigned char>&, unsigned& offset,unsigned type,bool force=false);
-   virtual void write(FILE* out);
+   virtual int write(FILE* out, unsigned len = 0);
+
    unsigned recordSize();
    unsigned type(){return type_;}
    unsigned tagsCnt(){return tags_.size();}
@@ -51,7 +56,8 @@ public:
    const nistTag* getTagById(unsigned id);
    const unsigned char* getImgData(){return image_data_;}
    const unsigned getImgDataSize(){return image_data_size_;}
-protected:
+public:
+   //virtual bool writeTag(nistTag& tag, FILE* out);
    virtual void clear();
    //!Смещение начала данных записи относительно начала файла
    unsigned offset_;
@@ -74,7 +80,7 @@ public:
    type1Record();
    ~type1Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset,bool force=false);
-   void write(FILE* out);
+   int write(FILE* out, unsigned len = 0);
    std::string getDOM(){return domain_;}
    std::string getTOT(){return transaction_;}
    std::string getTCN(){return control_number_;}
@@ -86,6 +92,7 @@ public:
    unsigned getRecordsCnt(){return file_content_.size();}
    unsigned getRecordType(unsigned rec_no);
 protected:
+   
    unsigned ver_;                                              ///1.002 VER 
    std::vector<std::pair<unsigned,unsigned> > file_content_;   ///1.003 CNT
    std::string transaction_;                                   ///1.004 TOT
@@ -109,8 +116,9 @@ public:
    type2Record();
    ~type2Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset,bool force=false);
-   void write(FILE* out);
+   //int write(FILE* out, unsigned len = 0);
 protected:
+   // bool writeTag(nistTag& tag, FILE* out);
    /*
       Field 2.002: Image Designation Character (IDC)  
       The IDC contained in this mandatory field is an ASCII representation of the IDC as defined in 
@@ -141,6 +149,7 @@ public:
    type4Record();
    virtual ~type4Record();
    virtual bool load(const std::vector<unsigned char>&, unsigned& offset);
+   virtual int write(FILE* out, unsigned len = 0);
    unsigned getHLL(){return hll_;}
    unsigned getVLL(){return vll_;}
    unsigned char getCGA(){return cga_;}
@@ -244,6 +253,7 @@ public:
    type7Record();
    ~type7Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset);
+   int write(FILE* out, unsigned len = 0);
 protected:
    /*
    The sixth byte contains a one-byte identifier which specifies whether the image is of Category-1 
@@ -295,6 +305,7 @@ public:
    type8Record();
    ~type8Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset);
+   int write(FILE* out, unsigned len = 0);
 protected:
    /*The sixth byte contains the signature type field. The permissible values of this field are:  
    0  The signature is that of the fingerprinted subject 
@@ -665,6 +676,7 @@ public:
    type15Record();
    ~type15Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset);
+   int write(FILE* out, unsigned len = 0);
    const char* getCGA(){return cga_.c_str();}
    unsigned char getPLP(){return plp_;}
    unsigned char getFGP(){return getPLP();}
@@ -827,5 +839,7 @@ protected:
    type1Record header_;
    std::vector<nistRecord*> records_;
 };
+
+
 
 #endif // NIST_PARSER_H

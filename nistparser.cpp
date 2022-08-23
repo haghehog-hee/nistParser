@@ -5,9 +5,15 @@
   \brief  Разбор ANSI-NIST файлов
 */
 
+#if 0
 #define dbg0 printf
 #define dbg3 printf
 #define dbg7 printf
+#else
+#define dbg0
+#define dbg3
+#define dbg7 
+#endif
 
 #include <algorithm>
 #include <cstdlib>
@@ -16,6 +22,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 
 #ifdef WIN32
@@ -35,6 +42,8 @@ extern "C" {
 #else
 #include "liba8.debugs.h"
 #endif
+
+
 
 #include "nistparser.h"
 
@@ -77,6 +86,29 @@ struct Type8Header
 
 
 #include "pack_ret.h"
+
+std::string fmtz(unsigned length, std::string str) 
+{
+    unsigned required = length - str.length();
+    for (int i = 0; i < required; i++) 
+    {
+        str = "0" + str;
+    }
+    return str;
+}
+
+std::string itos(unsigned length) 
+{
+    std::string str = std::to_string(length);
+    int length2 = length + str.length();
+    std::string str2 = std::to_string(length2);
+    if (str2.length() > str.length()) 
+    {
+        length2 += 1;
+        str2 = std::to_string(length2);
+    } 
+    return str2;
+}
 
 nistTag::nistTag()
 {
@@ -281,9 +313,56 @@ bool nistRecord::load(const std::vector<unsigned char>& data, unsigned& offset,u
    }
 }
 
-void nistRecord::write(FILE* out)
+int nistRecord::write(FILE* out, unsigned len)
 {
+    unsigned stpos = ftell(out);
+
+    unsigned char gs;
+    gs = nistParser::GS();
+    unsigned char fs;
+    fs = nistParser::FS();
+    std::string st;
+    if (len) 
+    {
+        st = std::to_string(type_) + ".001:" + itos(len);
+    } 
+    else 
+    {
+        st = std::to_string(type_) + ".001:";
+    }
+    fwrite(st.c_str(), 1, st.length(), out);
+    fwrite(&gs, 1, 1, out);
+    
+
+    for (int i = 1; i < tags_.size(); i++) 
+    {
+        std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
+        std::string str = std::to_string(type_)+"."+number+":";
+        fwrite(str.c_str(), 1, str.length(), out);
+        //int kek = ftell(out);
+        //int diff = tags_[i].offset_ - kek;
+        //std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
+        fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
+        if (i + 1 == tags_.size()) 
+        {
+            if (image_data_)
+            {
+                fwrite(image_data_, 1, image_data_size_, out);
+            }
+            fwrite(&fs, 1, 1, out);
+        }
+        else 
+        {
+            fwrite(&gs, 1, 1, out);
+        }
+    }
+    return ftell(out) - stpos;
 }
+
+//bool nistRecord::writeTag(nistTag& tag, FILE* out)
+//{
+//    return false;
+//}
 
 
 unsigned nistRecord::recordSize()
@@ -505,124 +584,169 @@ bool type1Record::load(const std::vector<unsigned char>& data, unsigned& offset,
    return false;
 }
 
-void type1Record::write(FILE* out) 
+int type1Record::write(FILE* out, unsigned len)
 {
+    int stpos = ftell(out);
+    unsigned char gs;
+    gs = nistParser::GS();
+    unsigned char us;
+    us = nistParser::US();
+    unsigned char rs;
+    rs = nistParser::RS();
+    unsigned char fs;
+    fs = nistParser::FS();
+    std::string st;
+    if (len)
+    {
+        st = "1.001:" + itos(len);
+    }
+    else
+    {
+        st = "1.001:";
+    }
+    fwrite(st.c_str(), 1, st.length(), out);
+    fwrite(&gs, 1, 1, out);
 
-    std::stringstream ss;
-    //ss << "1.001:";
-
+    std::string ss;
     
-
     const nistTag* tag = getTagById(2);
     if (tag)
     {
-        ss << "002:";
-        ss << ver_;
-        ss << nistParser::GS();
+        ss = "1.002:";
+        ss += fmtz(4,std::to_string(ver_));
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(3);
     if (tag)
     {
-        ss << "003:";
-        for (int i = 0; i < file_content_.size()-2; i++) 
+        ss = "1.003:1";
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&us, 1, 1, out);
+        ss =  std::to_string(file_content_.size());
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&rs, 1, 1, out);
+
+        for (int i = 0; i < file_content_.size(); i++) 
         {
-            ss << file_content_[i].first;
-            ss << nistParser::US();
-            ss << file_content_[i].second;
-            ss << nistParser::RS();
+            ss = std::to_string(file_content_[i].first);
+            fwrite(ss.c_str(), 1, ss.length(), out);
+            fwrite(&us, 1, 1, out);
+            ss = fmtz(2,std::to_string(file_content_[i].second));
+            fwrite(ss.c_str(), 1, ss.length(), out);
+            if (i + 1 == file_content_.size()) 
+            {
+                fwrite(&gs, 1, 1, out);
+            }
+            else 
+            {
+                fwrite(&rs, 1, 1, out);
+            }
         }
-        ss << file_content_[file_content_.size() - 1].first;
-        ss << nistParser::US();
-        ss << file_content_[file_content_.size() - 1].second;
-        ss << nistParser::GS();
+
     }
     tag = getTagById(4);
     if (tag)
     {
-        ss << "004:";
-        ss << transaction_;
-        ss << nistParser::GS();
+        ss = "1.004:";
+        ss += transaction_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(5);
     if (tag)
     {
-        ss << "005:";
-        ss << transaction_date_;
-        ss << nistParser::GS();
+        ss = "1.005:";
+        ss += transaction_date_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(6);
     if (tag)
     {
-        ss << "006:";
-        ss << priority_;
-        ss << nistParser::GS();
+        ss = "1.006:";
+        ss += std::to_string(priority_);
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(7);
     if (tag)
     {
-        ss << "007:";
-        ss << destination_;
-        ss << nistParser::GS();
+        ss = "1.007:";
+        ss += destination_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(8);
     if (tag)
     {
-        ss << "008:";
-        ss << originating_;
-        ss << nistParser::GS();
+        ss = "1.008:";
+        ss += originating_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(9);
     if (tag)
     {
-        ss << "009:";
-        ss << control_number_;
-        ss << nistParser::GS();
+        ss = "1.009:";
+        ss += control_number_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(10);
     if (tag)
     {
-        ss << "010:";
-        ss << responce_control_number_;
-        ss << nistParser::GS();
+        ss = "1.010:";
+        ss += responce_control_number_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(11);
     if (tag)
     {
-        ss << "011:";
-        ss << scanning_res_;
-        ss << nistParser::GS();
+
+        ss = "1.011:";
+        ss += std::to_string(scanning_res_);
+        ss.resize(11);
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(12);
     if (tag)
     {
-        ss << "012:";
-        ss << transmitting_res_;
-        ss << nistParser::GS();
+        ss = "1.012:";
+        ss += std::to_string(transmitting_res_);
+        ss.resize(11);
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(13);
     if (tag)
     {
-        ss << "013:";
-        ss << domain_;
-        ss << nistParser::GS();
+        ss = "1.013:";
+        ss += domain_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
     tag = getTagById(14);
     if (tag)
     {
-        ss << "014:";
-        ss << g_mean_time_;
-        ss << nistParser::GS();
+        ss = "1.014:";
+        ss += g_mean_time_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }          
     tag = getTagById(15);
     if (tag)
     {
-        ss << "015:";
-        ss << char_sets_;
-        ss << nistParser::GS();
+        ss = "1.015:";
+        ss += char_sets_;
+        fwrite(ss.c_str(), 1, ss.length(), out);
+        fwrite(&gs, 1, 1, out);
     }
-    ss.seekp(-1, ss.cur); ss << nistParser::FS();
-    std::string record1 = ss.str();
-    fwrite(record1.c_str(), 1, record1.length(), out);
+    fseek(out, -1, SEEK_CUR);
+    fwrite(&fs, 1, 1, out);
+    return ftell(out) - stpos;
 }
 
 unsigned type1Record::getRecordType(unsigned rec_no)
@@ -695,32 +819,58 @@ bool type2Record::load(const std::vector<unsigned char>& data, unsigned& offset,
    return false;
 }
 
-void type2Record::write(FILE* out)
-{
-    const nistTag* tag;
-    std::stringstream ss;
-    ss << "2.001:";
-    ss << nistParser::GS();
-    tag = getTagById(2);
-    if (tag)
-    {
-        ss << "002:";
-        ss << idc_;
-        ss << nistParser::GS();
-    }
-    tag = getTagById(3);
-    if (tag)
-    {
-        ss << "003:";
-        ss << sys_;
-        ss << nistParser::GS();
-    }
-
-
-
-    std::string record = ss.str();
-    fwrite(record.c_str(), 1, record.length(), out);
-}
+//void type2Record::write(FILE* out, unsigned len = 0);
+//{
+//    unsigned char gs;
+//    gs = nistParser::GS();
+//    unsigned char fs;
+//    fs = nistParser::FS();
+//    for (int i = 0; i < tags_.size(); i++)
+//    {
+//        std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
+//        std::string str = std::to_string(type_) + "." + number + ":";
+//        fwrite(str.c_str(), 1, str.length(), out);
+//        switch (tags_[i].tag_no()) {
+//            case 1:
+//            break;
+//            case 2:
+//                fwrite(&fs, 1, 1, out);
+//                break;
+//        }
+//        fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
+//        if (i + 1 == tags_.size())
+//        {
+//            fwrite(&fs, 1, 1, out);
+//        }
+//        else
+//        {
+//            fwrite(&gs, 1, 1, out);
+//        }
+//    }
+//    
+//    std::stringstream ss;
+//    ss << "2.001:";
+//    ss << nistParser::GS();
+//    tag = getTagById(2);
+//    if (tag)
+//    {
+//        ss << "002:";
+//        ss << idc_;
+//        ss << nistParser::GS();
+//    }
+//    tag = getTagById(3);
+//    if (tag)
+//    {
+//        ss << "003:";
+//        ss << sys_;
+//        ss << nistParser::GS();
+//    }
+//
+//
+//
+//    std::string record = ss.str();
+//    fwrite(record.c_str(), 1, record.length(), out);
+//}
 
 
 type4Record::type4Record()
@@ -785,6 +935,7 @@ bool type4Record::load(const std::vector<unsigned char>& data, unsigned& offset)
          dbg7("type4Record::load empty image record %d\n",hdr.idc_);
       }
       offset += record_size_;
+      //std::cout << "record size = " << record_size_;
       return true;
    }
    else
@@ -793,6 +944,37 @@ bool type4Record::load(const std::vector<unsigned char>& data, unsigned& offset)
    }
    clear();
    return false;
+}
+
+int type4Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    unsigned char fs;
+    fs = nistParser::FS();
+    Type4Header hdr;
+    unsigned recordsize = record_size_;
+    if (len)
+    {
+        recordsize = len;
+    } 
+
+    hdr.len_ = htonl(recordsize);
+    
+    //std::cout << "record size = " << record_size_;
+    hdr.idc_ = idc_;
+    hdr.imp_ = imp_;
+    memcpy(hdr.fgp_, fgp_, sizeof(fgp_));
+    hdr.isr_ = isr_;
+    hdr.hll_ = htons(hll_);
+
+    hdr.vll_ = htons(vll_);
+    hdr.cga_ = cga_;
+    fwrite(&hdr, sizeof(Type4Header), 1, out);
+    if (image_data_)
+    {
+        fwrite(image_data_, 1, image_data_size_, out);
+    }
+    return ftell(out) - stpos;
 }
 
 type7Record::type7Record()
@@ -851,6 +1033,35 @@ bool type7Record::load(const std::vector<unsigned char>& data, unsigned& offset)
    clear();
    return false;
 }
+
+int type7Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    Type7Header hdr;
+
+    unsigned recordsize = record_size_;
+    if (len)
+    {
+        recordsize = len;
+    }
+
+    hdr.len_ = htonl(recordsize);
+    hdr.hll_ = htons(hll_);
+    hdr.vll_ = htons(vll_);
+
+    hdr.idc_ = idc_;
+    hdr.imt_ = imt_;
+    memcpy(hdr.pcn_, pcn_, sizeof(pcn_));
+    memcpy(hdr.imr_, imr_, sizeof(pcn_));
+    hdr.cga_ = cga_;
+    fwrite(&hdr, sizeof(Type7Header), 1, out);
+    if (image_data_)
+    {
+        fwrite(image_data_, 1, image_data_size_, out);
+    }
+    return ftell(out) - stpos;
+}
+
 type8Record::type8Record()
    : type4Record()
 {
@@ -903,6 +1114,33 @@ bool type8Record::load(const std::vector<unsigned char>& data, unsigned& offset)
    clear();
    return false;
 }
+
+int type8Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    unsigned char fs;
+    fs = nistParser::FS();
+    Type8Header hdr;
+    unsigned recordsize = record_size_;
+    if (len)
+    {
+        recordsize = len;
+    }
+    hdr.len_ = htonl(recordsize);
+    hdr.hll_ = htons(hll_);
+    hdr.vll_ = htons(vll_);
+
+    hdr.idc_ = idc_;
+    hdr.sig_ = sig_;
+    hdr.srt_ = srt_;
+    fwrite(&hdr, sizeof(Type8Header), 1, out);
+    if (image_data_)
+    {
+        fwrite(image_data_, 1, image_data_size_, out);
+    }
+    return ftell(out) - stpos;
+}
+
 
 type9Record::type9Record() 
    : nistRecord()
@@ -2085,6 +2323,139 @@ bool type15Record::load(const std::vector<unsigned char>& data, unsigned& offset
    return false;
 }
 
+int type15Record::write(FILE* out, unsigned len)
+{
+    int stpos = ftell(out);
+    unsigned char gs;
+    gs = nistParser::GS();
+    unsigned char fs;
+    fs = nistParser::FS();
+    std::cout << std::endl;
+    for (int i = 0; i < tags_.size(); i++)
+    {
+        
+        std::string number = fmtz(3, std::to_string(tags_[i].tag_no()));
+        std::string str = std::to_string(type_) + "." + number + ":";
+        fwrite(str.c_str(), 1, str.length(), out);
+        int kek = ftell(out);
+        int diff = tags_[i].offset_ - kek;
+
+        std::cout << i << " " << tags_[i].tag_no() << "  " << diff << "\n";
+        switch (tags_[i].tag_no()) 
+        {
+            case 1:
+            {
+                if (len) 
+                {
+                    std::string x = itos(len);
+                    fwrite(x.c_str(), 1, x.length(), out);
+                }
+                break;
+            }
+            case 2: 
+            {
+                std::string x = std::to_string(idc_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+            case 3:
+            {
+                std::string x = std::to_string(imp_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+            case 4:
+            {
+                fwrite(ori_.c_str(), 1, ori_.length(), out);
+                break;
+            }
+            case 5:
+            {
+                fwrite(pcd_.c_str(), 1, pcd_.length(), out);
+                break;
+            }
+            case 6:
+            {
+                std::string x = std::to_string(hll_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+
+            case 7:
+            {
+                std::string x = std::to_string(vll_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+
+            case 8:
+            {
+                fwrite(&slc_, 1, 1, out);
+                break;
+            }
+
+            case 9:
+            {
+                std::string x = std::to_string(hps_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+
+            case 10:
+            {
+                std::string x = std::to_string(vps_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+
+            case 11:
+            {
+                fwrite(cga_.c_str(), 1, cga_.length(), out);
+                break;
+            }
+            case 12:
+            {
+                fwrite(&pbx_, 1, 1, out);
+                break;
+            }
+
+            case 13:
+            {
+                std::string x = std::to_string(plp_);
+                fwrite(x.c_str(), 1, x.length(), out);
+                break;
+            }
+ 
+            case 20:
+            {
+                fwrite(com_.c_str(), 1, com_.length(), out);
+                break;
+            }
+            case 999:
+                if (image_data_)
+                {
+                    fwrite(image_data_, 1, image_data_size_, out);
+                }
+                break;
+            default:
+                fwrite(tags_[i].data(), 1, tags_[i].data_size(), out);
+            break;
+        }
+             
+        
+        if (i + 1 == tags_.size())
+        {
+            fwrite(&fs, 1, 1, out);
+        }
+        else
+        {
+            fwrite(&gs, 1, 1, out);
+        }
+
+    }
+    return ftell(out) - stpos;
+}
+
 type99Record::type99Record() 
    : nistRecord()
 {   
@@ -2158,6 +2529,10 @@ bool nistParser::load(const std::vector<unsigned char>& file_data, bool force)
    bool res = false;
    unsigned offset = 0;
    err_msg_ = "";
+
+   header_.clear();
+   records_.clear();
+
    if(header_.load(file_data,offset,force))
    {
       res = true;
@@ -2173,7 +2548,10 @@ bool nistParser::load(const std::vector<unsigned char>& file_data, bool force)
       unsigned recs = header_.getRecordsCnt();
       for(unsigned rec_no=0; rec_no<recs;rec_no++)
       {
+         
+
          unsigned rec_type  = header_.getRecordType(rec_no);
+     
          dbg7("nistParser::load from record type %d\n",rec_type);
          switch(rec_type)
          {
@@ -2338,6 +2716,8 @@ bool nistParser::load(const std::vector<unsigned char>& file_data, bool force)
          {
             break;
          }
+         records_.back()->offset_ = offset;
+         std::cout << "\n" << "offset at load = " << offset << " type = " << rec_type;
       }
    }
    return force? true:res;
@@ -2434,11 +2814,18 @@ bool nistParser::readFile(const std::string& file_name,std::vector<unsigned char
 bool nistParser::writeFile(const std::string& output_file_name) 
 {
     FILE *out = fopen(output_file_name.c_str(), "wb");
-    header_.write(out);
+
+    int len = header_.write(out, 0);
+    fseek(out, -len, SEEK_CUR);
+    header_.write(out, len);
         for (int rec_no = 0; rec_no < records_.size(); rec_no++) 
         {
-            (records_[rec_no])->write(out);
-            std::cout << std::to_string(records_[rec_no]->type());
+            len = (records_[rec_no])->write(out, 0);
+            fseek(out, -len, SEEK_CUR);
+            (records_[rec_no])->write(out, len);
+            int pos = ftell(out);
+            std::cout << "\n" << "offset at write " << ftell(out) << " delta " << records_[rec_no]->offset_-pos << " type " << std::to_string(records_[rec_no]->type());
+
         }
  
     return true;
