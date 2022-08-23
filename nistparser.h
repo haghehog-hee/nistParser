@@ -573,6 +573,7 @@ public:
    type14Record();
    ~type14Record();
    bool load(const std::vector<unsigned char>&, unsigned& offset);
+   int write(FILE* out, unsigned len = 0);
    const char* getCGA(){return cga_.c_str();}
    unsigned char getSLC(){return slc_;}
    unsigned getISR(){return vps_;}
