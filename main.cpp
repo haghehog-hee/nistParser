@@ -14,7 +14,7 @@ bool compare(const char* file1, const char* file2)
 	fread(fl2, 1, end, f2);
 	for (int i = 0; i < end; i++) {
 		if (fl1[i] != fl2[i]) {
-			std::cout << "error at " << i << " " << fl1[i] << " " << fl2[i] << "\n ";
+			std::cout << "mismatch at " << i << " " << fl1[i] << " " << fl2[i] << "\n";
 		}
 	}
 	delete fl1;
@@ -25,13 +25,9 @@ bool compare(const char* file1, const char* file2)
 int main() {
 	nistParser parser;
 
-	//parser.load("74503202L1B_000000003.int");
-	//parser.writeFile("lol.int");
-	nistParser parser2;
-	//parser2.load("lol3.int"); 
-	//parser.writeFile("lol4.int");
-	//parser2.writeFile("lol1.int");
-
-	compare("74503202L1B_000000003.int", "lol4.int");
+	parser.load("74503202L1B_000000003.int");
+	parser.write("output.int"); 
+	parser.load("output.int");
+	//compare("74503202L1B_000000003.int", "output.int");
 	return 0;
 }

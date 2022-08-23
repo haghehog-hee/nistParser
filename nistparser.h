@@ -815,10 +815,10 @@ public:
    bool load(const std::string&,bool force=false);
    /// Loads ANSI-NIS file data from memory buffer. Buffer should be valid until obect destruction.
    bool load(const std::vector<unsigned char>&,bool force=false);
-   bool write(std::vector<nistRecord*> records_);
+
    /// Service function for reading file in to memory
    static bool readFile(const std::string& file_name,std::vector<unsigned char>& content);
-   bool writeFile(const std::string& output_file_name);
+   void write(const std::string& output_file_name);
    /// Unit Separator  Separates information items 
    static unsigned char US() {return 0x1F;}
    /// Record Separator  Separates subfields

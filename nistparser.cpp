@@ -5,7 +5,7 @@
   \brief  Разбор ANSI-NIST файлов
 */
 
-#if 0
+#if 1
 #define dbg0 printf
 #define dbg3 printf
 #define dbg7 printf
@@ -2923,7 +2923,6 @@ bool nistParser::load(const std::vector<unsigned char>& file_data, bool force)
       for(unsigned rec_no=0; rec_no<recs;rec_no++)
       {
          
-
          unsigned rec_type  = header_.getRecordType(rec_no);
      
          dbg7("nistParser::load from record type %d\n",rec_type);
@@ -3096,16 +3095,6 @@ bool nistParser::load(const std::vector<unsigned char>& file_data, bool force)
    return force? true:res;
 }
 
-//bool nistParser::write(std::vector<nistRecord*> records_) {
-//
-//    std::ofstream outfile("test.txt");
-//
-//    outfile << "my text here!" << std::endl;
-//
-//    outfile.close();
-//}
-
-
 std::string nistParser::getDOM()
 {
    return header_.getDOM();
@@ -3184,21 +3173,21 @@ bool nistParser::readFile(const std::string& file_name,std::vector<unsigned char
    return false;
 }
 
-bool nistParser::writeFile(const std::string& output_file_name) 
+void nistParser::write(const std::string& output_file_name) 
 {
     FILE *out = fopen(output_file_name.c_str(), "wb");
 
     int len = header_.write(out, 0);
     fseek(out, -len, SEEK_CUR);
     header_.write(out, len);
-        for (int rec_no = 0; rec_no < records_.size(); rec_no++) 
-        {
-            len = (records_[rec_no])->write(out, 0);
-            fseek(out, -len, SEEK_CUR);
-            (records_[rec_no])->write(out, len);
-            int pos = ftell(out);
 
-        }
- 
-    return true;
+    for (int rec_no = 0; rec_no < records_.size(); rec_no++) 
+    {
+        len = (records_[rec_no])->write(out, 0);
+        fseek(out, -len, SEEK_CUR);
+        (records_[rec_no])->write(out, len);
+        int pos = ftell(out);
+    }
+
+    fclose(out);
 }
